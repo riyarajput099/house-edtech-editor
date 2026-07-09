@@ -14,7 +14,14 @@ export async function createToken(payload: {
 }
 
 export async function verifyToken(token: string) {
-  const { payload } = await jwtVerify(token, secret);
+  try {
+    const { payload } = await jwtVerify(token, secret);
 
-  return payload;
+    return payload as {
+      id: string;
+      email: string;
+    };
+  } catch {
+    return null;
+  }
 }

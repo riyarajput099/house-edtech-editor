@@ -1,31 +1,73 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { useEffect, useState } from "react";
+
+import Navbar from "@/components/ui/dashboard/navbar";
+import EmptyState from "@/components/ui/dashboard/EmptyState";
+import CreateDocumentDialog from "@/components/ui/dashboard/CreateDocumentDialog";
+import DocumentCard from "@/components/ui/dashboard/DocumentCard";
+
+interface Document {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+}
 
 export default function DashboardPage() {
-  const router = useRouter();
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleLogout = async () => {
-    await fetch("/api/auth/logout", {
-      method: "POST",
-    });
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
 
-    toast.success("Logged out successfully");
+  const fetchDocuments = async () => {
+    try {
+      const response = await fetch("/api/documents");
 
-    router.push("/login");
+      const data = await response.json();
+
+      if (data.success) {
+        setDocuments(data.documents);
+      }
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center gap-6">
-      <h1 className="text-4xl font-bold">
-        🎉 Welcome to Dashboard
-      </h1>
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
 
-      <Button onClick={handleLogout}>
-        Logout
-      </Button>
-    </main>
+      <main className="mx-auto max-w-6xl p-8">
+        <div className="mb-8 flex items-center justify-between">
+          <h2 className="text-3xl font-bold">
+            My Documents
+          </h2>
+
+         <CreateDocumentDialog
+  onDocumentCreated={fetchDocuments}
+/>
+        </div>
+
+        {loading ? (
+          <p className="text-center mt-10">Loading...</p>
+        ) : documents.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {documents.map((document) => (
+              <DocumentCard
+                key={document.id}
+                document={document}
+              />
+            ))}
+          </div>
+        )}
+      </main>
+    </div>
   );
 }

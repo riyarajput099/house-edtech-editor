@@ -28,11 +28,14 @@ model User {
 
 model Document {
   id        String   @id @default(cuid())
+
   title     String
-  content   String   @db.Text
+  content   String   @db.Text @default("")
 
   ownerId   String
-  owner     User     @relation("Owner", fields: [ownerId], references: [id])
+  owner     User @relation("Owner", fields: [ownerId], references: [id])
+
+  isDeleted Boolean  @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
