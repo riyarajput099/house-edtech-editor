@@ -19,10 +19,7 @@ interface Props {
   onDocumentCreated: () => void;
 }
 
-export default function CreateDocumentDialog({
-  onDocumentCreated,
-}: Props) {
-
+export default function CreateDocumentDialog({ onDocumentCreated }: Props) {
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -60,8 +57,7 @@ export default function CreateDocumentDialog({
       setOpen(false);
 
       // Refresh document list only
-onDocumentCreated();
-
+      onDocumentCreated();
     } catch {
       toast.error("Something went wrong");
     } finally {
@@ -71,7 +67,6 @@ onDocumentCreated();
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-
       <DialogTrigger asChild>
         <Button className="gap-2">
           <Plus className="h-4 w-4" />
@@ -80,7 +75,6 @@ onDocumentCreated();
       </DialogTrigger>
 
       <DialogContent>
-
         <DialogHeader>
           <DialogTitle>Create New Document</DialogTitle>
         </DialogHeader>
@@ -92,16 +86,11 @@ onDocumentCreated();
         />
 
         <DialogFooter>
-          <Button
-            onClick={handleCreate}
-            disabled={loading}
-          >
+          <Button onClick={handleCreate} disabled={loading}>
             {loading ? "Creating..." : "Create"}
           </Button>
         </DialogFooter>
-
       </DialogContent>
-
     </Dialog>
   );
 }

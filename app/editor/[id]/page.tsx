@@ -4,33 +4,47 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
 
-interface DocumentType {
-  id: string;
-  title: string;
-  content: string;
-}
+import { useDebounce } from "@/hooks/useDebounce";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useSyncQueue } from "@/hooks/useSyncQueue";
+import VersionHistory from "@/components/ui/editor/VersionHistory";
+
+import { saveDocumentLocally } from "@/lib/database/documentStorage";
+import { addToSyncQueue } from "@/lib/database/syncQueue";
 
 export default function EditorPage() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
 
-  const [document, setDocument] = useState<DocumentType | null>(null);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const isOnline = useOnlineStatus();
+
+  // ✅ Start background sync
+  useSyncQueue();
+
+  const debouncedTitle = useDebounce(title, 1000);
+  const debouncedContent = useDebounce(content, 1000);
+
+  // Load document
   useEffect(() => {
     fetchDocument();
-  }, []);
+  }, [id]);
 
   async function fetchDocument() {
     try {
       const response = await fetch(`/api/documents/${id}`);
       const data = await response.json();
 
-      if (response.ok) {
-        setDocument(data.document);
-      } else {
+      if (!response.ok) {
         toast.error(data.message);
+        return;
       }
+
+      setTitle(data.document.title);
+      setContent(data.document.content);
     } catch {
       toast.error("Failed to load document");
     } finally {
@@ -38,20 +52,56 @@ export default function EditorPage() {
     }
   }
 
-  async function saveDocument(updatedDocument: DocumentType) {
+  // Auto Save (after debounce)
+  useEffect(() => {
+    if (!loading) {
+      saveDocument();
+    }
+  }, [debouncedTitle, debouncedContent]);
+
+  async function saveDocument() {
     try {
       setSaving(true);
 
-      await fetch(`/api/documents/${id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: updatedDocument.title,
-          content: updatedDocument.content,
-        }),
+      // Save in IndexedDB
+      await saveDocumentLocally({
+        id,
+        title,
+        content,
       });
+
+      if (isOnline) {
+        // Sync immediately
+        const response = await fetch(`/api/documents/${id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title,
+            content,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          toast.error(data.message);
+        }
+      } else {
+        // Queue for sync later
+        await addToSyncQueue({
+          id: crypto.randomUUID(),
+          documentId: id,
+          action: "UPDATE",
+          payload: {
+            title,
+            content,
+          },
+        });
+
+        toast.info("Saved locally. Will sync when online.");
+      }
     } catch {
       toast.error("Save failed");
     } finally {
@@ -69,44 +119,43 @@ export default function EditorPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-10">
+      <div className="mb-6 flex items-center justify-between">
 
-      <div className="mb-4 text-sm text-gray-500">
-        {saving ? "Saving..." : "Saved"}
-      </div>
+  <div className="flex items-center gap-4">
+
+    <div className="text-sm text-gray-500">
+      {saving ? "Saving..." : "Saved ✓"}
+    </div>
+
+    <div
+      className={`rounded px-3 py-1 text-sm font-medium ${
+        isOnline
+          ? "bg-green-100 text-green-700"
+          : "bg-red-100 text-red-700"
+      }`}
+    >
+      {isOnline ? "🟢 Online" : "🔴 Offline"}
+    </div>
+
+  </div>
+
+  <VersionHistory documentId={id} />
+
+</div>
 
       <input
-        className="w-full text-4xl font-bold outline-none mb-8"
-        value={document?.title || ""}
-        onChange={(e) => {
-          if (!document) return;
-
-          const updated = {
-            ...document,
-            title: e.target.value,
-          };
-
-          setDocument(updated);
-          saveDocument(updated);
-        }}
+        className="w-full border-b pb-2 mb-8 text-4xl font-bold outline-none"
+        placeholder="Untitled Document"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
       />
 
       <textarea
-        className="w-full min-h-[500px] outline-none resize-none text-lg"
+        className="min-h-[500px] w-full resize-none text-lg outline-none"
         placeholder="Start typing..."
-        value={document?.content || ""}
-        onChange={(e) => {
-          if (!document) return;
-
-          const updated = {
-            ...document,
-            content: e.target.value,
-          };
-
-          setDocument(updated);
-          saveDocument(updated);
-        }}
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
       />
-
     </div>
   );
 }

@@ -9,10 +9,7 @@ interface Props {
   }>;
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: Props
-) {
+export async function GET(request: NextRequest, { params }: Props) {
   try {
     const token = request.cookies.get("token")?.value;
 
@@ -22,7 +19,7 @@ export async function GET(
           success: false,
           message: "Unauthorized",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -43,7 +40,7 @@ export async function GET(
           success: false,
           message: "Document not found",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -51,7 +48,6 @@ export async function GET(
       success: true,
       document,
     });
-
   } catch (error) {
     console.log(error);
 
@@ -60,7 +56,7 @@ export async function GET(
         success: false,
         message: "Internal Server Error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -69,7 +65,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
@@ -83,7 +79,7 @@ export async function PATCH(
           success: false,
           message: "Unauthorized",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -96,7 +92,7 @@ export async function PATCH(
           success: false,
           message: "Invalid token",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -112,7 +108,7 @@ export async function PATCH(
           success: false,
           errors: result.error.flatten(),
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -130,9 +126,18 @@ export async function PATCH(
           success: false,
           message: "Document not found",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
+
+    // Save current document as a version before updating
+    await prisma.documentVersion.create({
+      data: {
+        documentId: existingDocument.id,
+        title: existingDocument.title,
+        content: existingDocument.content,
+      },
+    });
 
     // Update document
     const updatedDocument = await prisma.document.update({
@@ -158,7 +163,7 @@ export async function PATCH(
         success: false,
         message: "Internal Server Error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -41,6 +41,23 @@ model Document {
   updatedAt DateTime @updatedAt
 
   collaborators Collaborator[]
+
+  // ✅ Version History
+  versions DocumentVersion[]
+}
+
+model DocumentVersion {
+  id         String   @id @default(cuid())
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  title      String
+  content    String   @db.Text
+
+  createdAt  DateTime @default(now())
+
+  @@index([documentId])
 }
 
 model Collaborator {
