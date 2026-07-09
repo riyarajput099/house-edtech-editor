@@ -1,19 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { toast } from "sonner";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
-export default function RegisterPage() {
+export default function LoginPage() {
   const [formData, setFormData] = useState({
-    name: "",
     email: "",
     password: "",
-    confirmPassword: "",
   });
 
   const router = useRouter();
@@ -30,7 +30,7 @@ export default function RegisterPage() {
     try {
       setLoading(true);
 
-      const response = await fetch("/api/auth/register", {
+      const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -41,24 +41,16 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        toast.success(data.message || "Registration failed");
+        toast.error(data.message);
         return;
       }
 
-      toast.success("🎉 Registration Successful!");
-
-      setFormData({
-        name: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-      });
-
+      toast.success(data.message);
       setTimeout(() => {
-  router.push("/login");
-}, 1500);
+  router.push("/dashboard");
+}, 1000);
     } catch (error) {
-      console.error("Registration Error:", error);
+      console.error(error);
       toast.error("Something went wrong");
     } finally {
       setLoading(false);
@@ -69,39 +61,26 @@ export default function RegisterPage() {
     <main className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl text-center">
-            Create Account
+          <CardTitle className="text-center text-2xl">
+            Login
           </CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              name="name"
-              placeholder="John Doe"
-              value={formData.name}
-              onChange={handleChange}
-            />
-          </div>
 
           <div>
-            <Label htmlFor="email">Email</Label>
+            <Label>Email</Label>
             <Input
-              id="email"
               name="email"
               type="email"
-              placeholder="john@example.com"
               value={formData.email}
               onChange={handleChange}
             />
           </div>
 
           <div>
-            <Label htmlFor="password">Password</Label>
+            <Label>Password</Label>
             <Input
-              id="password"
               name="password"
               type="password"
               value={formData.password}
@@ -109,24 +88,24 @@ export default function RegisterPage() {
             />
           </div>
 
-          <div>
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-            />
-          </div>
-
           <Button
             className="w-full"
-            onClick={handleSubmit}
             disabled={loading}
+            onClick={handleSubmit}
           >
-            {loading ? "Creating Account..." : "Create Account"}
+            {loading ? "Logging in..." : "Login"}
           </Button>
+
+          <p className="text-center text-sm">
+            Don't have an account?{" "}
+            <Link
+              href="/register"
+              className="text-blue-600 hover:underline"
+            >
+              Register
+            </Link>
+          </p>
+
         </CardContent>
       </Card>
     </main>
