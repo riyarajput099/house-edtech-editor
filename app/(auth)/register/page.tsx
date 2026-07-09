@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -14,11 +15,48 @@ export default function RegisterPage() {
     confirmPassword: "",
   });
 
+  const [loading, setLoading] = useState(false);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({
       ...prev,
       [e.target.name]: e.target.value,
     }));
+  };
+
+  const handleSubmit = async () => {
+    try {
+      setLoading(true);
+
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.success(data.message || "Registration failed");
+        return;
+      }
+
+      toast.success("🎉 Registration Successful!");
+
+      setFormData({
+        name: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+      });
+    } catch (error) {
+      console.error("Registration Error:", error);
+      toast.error("Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -31,7 +69,6 @@ export default function RegisterPage() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-
           <div>
             <Label htmlFor="name">Name</Label>
             <Input
@@ -67,9 +104,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <Label htmlFor="confirmPassword">
-              Confirm Password
-            </Label>
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
             <Input
               id="confirmPassword"
               name="confirmPassword"
@@ -79,10 +114,13 @@ export default function RegisterPage() {
             />
           </div>
 
-          <Button className="w-full">
-            Create Account
+          <Button
+            className="w-full"
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? "Creating Account..." : "Create Account"}
           </Button>
-
         </CardContent>
       </Card>
     </main>
