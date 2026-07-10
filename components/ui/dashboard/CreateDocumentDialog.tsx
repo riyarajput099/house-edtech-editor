@@ -67,11 +67,9 @@ export default function CreateDocumentDialog({ onDocumentCreated }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          New Document
-        </Button>
+      <DialogTrigger render={<Button className="gap-2" />}>
+        <Plus className="h-4 w-4" />
+        New Document
       </DialogTrigger>
 
       <DialogContent>
