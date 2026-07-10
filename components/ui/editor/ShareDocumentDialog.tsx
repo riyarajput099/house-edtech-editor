@@ -89,13 +89,9 @@ export default function ShareDocumentDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
 
-      <DialogTrigger asChild>
-
-        <Button variant="outline">
-          <Share2 className="mr-2 h-4 w-4" />
-          Share
-        </Button>
-
+      <DialogTrigger render={<Button variant="outline" />}>
+        <Share2 className="mr-2 h-4 w-4" />
+        Share
       </DialogTrigger>
 
       <DialogContent>

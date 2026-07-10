@@ -55,11 +55,9 @@ export default function VersionHistory({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline">
-          <History className="mr-2 h-4 w-4" />
-          History
-        </Button>
+      <DialogTrigger render={<Button variant="outline" />}>
+        <History className="mr-2 h-4 w-4" />
+        History
       </DialogTrigger>
 
       <DialogContent className="max-h-[500px] overflow-y-auto">
