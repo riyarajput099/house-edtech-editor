@@ -5,7 +5,6 @@ import { verifyToken } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    // Get token from cookie
     const token = request.cookies.get("token")?.value;
 
     if (!token) {
@@ -18,7 +17,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify JWT
     const payload = await verifyToken(token);
 
     if (!payload) {
@@ -31,10 +29,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Read request body
     const body = await request.json();
 
-    // Validate input
     const result = createDocumentSchema.safeParse(body);
 
     if (!result.success) {
@@ -47,7 +43,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create document
     const document = await prisma.document.create({
       data: {
         title: result.data.title,
@@ -76,7 +71,6 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Get token from cookie
     const token = request.cookies.get("token")?.value;
 
     if (!token) {
@@ -89,7 +83,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verify JWT
     const payload = await verifyToken(token);
 
     if (!payload) {
@@ -102,19 +95,51 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch logged-in user's documents
     const documents = await prisma.document.findMany({
       where: {
-        ownerId: payload.id,
+        isDeleted: false,
+        OR: [
+          {
+            ownerId: payload.id,
+          },
+          {
+            collaborators: {
+              some: {
+                userId: payload.id,
+              },
+            },
+          },
+        ],
       },
+
+      include: {
+        owner: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+
+        collaborators: true,
+      },
+
       orderBy: {
-        createdAt: "desc",
+        updatedAt: "desc",
       },
     });
 
+    const ownedDocuments = documents.filter(
+      (doc) => doc.ownerId === payload.id
+    );
+
+    const sharedDocuments = documents.filter(
+      (doc) => doc.ownerId !== payload.id
+    );
+
     return NextResponse.json({
       success: true,
-      documents,
+      ownedDocuments,
+      sharedDocuments,
     });
   } catch (error) {
     console.log(error);

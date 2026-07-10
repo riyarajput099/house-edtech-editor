@@ -12,10 +12,21 @@ interface Document {
   title: string;
   content: string;
   createdAt: string;
+  ownerId: string;
+
+  owner: {
+    name: string;
+    email: string;
+  };
+
+  collaborators: {
+    role: string;
+  }[];
 }
 
 export default function DashboardPage() {
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [ownedDocuments, setOwnedDocuments] = useState<Document[]>([]);
+  const [sharedDocuments, setSharedDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,7 +40,8 @@ export default function DashboardPage() {
       const data = await response.json();
 
       if (data.success) {
-        setDocuments(data.documents);
+        setOwnedDocuments(data.ownedDocuments);
+        setSharedDocuments(data.sharedDocuments);
       }
     } catch (error) {
       console.log(error);
@@ -45,27 +57,60 @@ export default function DashboardPage() {
       <main className="mx-auto max-w-6xl p-8">
         <div className="mb-8 flex items-center justify-between">
           <h2 className="text-3xl font-bold">
-            My Documents
+            Documents
           </h2>
 
-         <CreateDocumentDialog
-  onDocumentCreated={fetchDocuments}
-/>
+          <CreateDocumentDialog
+            onDocumentCreated={fetchDocuments}
+          />
         </div>
 
         {loading ? (
-          <p className="text-center mt-10">Loading...</p>
-        ) : documents.length === 0 ? (
-          <EmptyState />
+          <p className="mt-10 text-center">Loading...</p>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {documents.map((document) => (
-              <DocumentCard
-                key={document.id}
-                document={document}
-              />
-            ))}
-          </div>
+          <>
+            {ownedDocuments.length === 0 &&
+            sharedDocuments.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <>
+                {ownedDocuments.length > 0 && (
+                  <>
+                    <h3 className="mb-4 text-2xl font-semibold">
+                      My Documents
+                    </h3>
+
+                    <div className="mb-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {ownedDocuments.map((document) => (
+                        <DocumentCard
+                          key={document.id}
+                          document={document}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {sharedDocuments.length > 0 && (
+                  <>
+                    <h3 className="mb-4 text-2xl font-semibold">
+                      Shared With Me
+                    </h3>
+
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {sharedDocuments.map((document) => (
+                        <DocumentCard
+                          key={document.id}
+                          document={document}
+                          shared
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </>
         )}
       </main>
     </div>

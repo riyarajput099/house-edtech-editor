@@ -25,20 +25,51 @@ export async function GET(request: NextRequest, { params }: Props) {
 
     const payload = await verifyToken(token);
 
+    if (!payload) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid token",
+        },
+        { status: 401 },
+      );
+    }
+
     const { id } = await params;
 
-    const document = await prisma.document.findFirst({
+    let role: "OWNER" | "EDITOR" | "VIEWER" | null = null;
+
+    let document = await prisma.document.findFirst({
       where: {
         id,
         ownerId: payload.id,
       },
     });
 
-    if (!document) {
+    if (document) {
+      role = "OWNER";
+    } else {
+      const collaborator = await prisma.collaborator.findFirst({
+        where: {
+          documentId: id,
+          userId: payload.id,
+        },
+        include: {
+          document: true,
+        },
+      });
+
+      if (collaborator) {
+        document = collaborator.document;
+        role = collaborator.role;
+      }
+    }
+
+    if (!document || !role) {
       return NextResponse.json(
         {
           success: false,
-          message: "Document not found",
+          message: "Document not found or access denied",
         },
         { status: 404 },
       );
@@ -47,6 +78,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     return NextResponse.json({
       success: true,
       document,
+      role,
     });
   } catch (error) {
     console.log(error);
@@ -112,19 +144,47 @@ export async function PATCH(
       );
     }
 
-    // Check document ownership
-    const existingDocument = await prisma.document.findFirst({
+    // Check document ownership or editor access
+    let hasAccess = false;
+    let existingDocument = await prisma.document.findFirst({
       where: {
         id,
         ownerId: payload.id,
       },
     });
 
-    if (!existingDocument) {
+    if (existingDocument) {
+      hasAccess = true;
+    } else {
+      const collaborator = await prisma.collaborator.findFirst({
+        where: {
+          documentId: id,
+          userId: payload.id,
+        },
+        include: {
+          document: true,
+        },
+      });
+
+      if (collaborator && (collaborator.role === "EDITOR" || collaborator.role === "OWNER")) {
+        hasAccess = true;
+        existingDocument = collaborator.document;
+      } else if (collaborator && collaborator.role === "VIEWER") {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Forbidden: You are a viewer",
+          },
+          { status: 403 },
+        );
+      }
+    }
+
+    if (!existingDocument || !hasAccess) {
       return NextResponse.json(
         {
           success: false,
-          message: "Document not found",
+          message: "Document not found or access denied",
         },
         { status: 404 },
       );

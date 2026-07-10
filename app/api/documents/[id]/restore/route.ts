@@ -27,9 +27,45 @@ export async function POST(
 
     const payload = await verifyToken(token);
 
+    if (!payload) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Unauthorized",
+        },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
 
     const { id } = await params;
+
+    const documentToRestore = await prisma.document.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    if (!documentToRestore) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Document not found",
+        },
+        { status: 404 }
+      );
+    }
+
+    if (documentToRestore.ownerId !== payload.id) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Forbidden: Only owners can restore versions",
+        },
+        { status: 403 }
+      );
+    }
 
     const version = await prisma.documentVersion.findUnique({
       where: {

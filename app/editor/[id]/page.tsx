@@ -8,6 +8,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSyncQueue } from "@/hooks/useSyncQueue";
 import VersionHistory from "@/components/ui/editor/VersionHistory";
+import ShareDocumentDialog from "@/components/ui/editor/ShareDocumentDialog";
 
 import { saveDocumentLocally } from "@/lib/database/documentStorage";
 import { addToSyncQueue } from "@/lib/database/syncQueue";
@@ -19,6 +20,7 @@ export default function EditorPage() {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [role, setRole] = useState<"OWNER" | "EDITOR" | "VIEWER" | null>(null);
 
   const isOnline = useOnlineStatus();
 
@@ -39,12 +41,13 @@ export default function EditorPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        toast.error(data.message);
+        toast.error(data.message || "Failed to load document");
         return;
       }
 
       setTitle(data.document.title);
       setContent(data.document.content);
+      setRole(data.role);
     } catch {
       toast.error("Failed to load document");
     } finally {
@@ -60,6 +63,7 @@ export default function EditorPage() {
   }, [debouncedTitle, debouncedContent]);
 
   async function saveDocument() {
+    if (role === "VIEWER") return;
     try {
       setSaving(true);
 
@@ -86,7 +90,7 @@ export default function EditorPage() {
         const data = await response.json();
 
         if (!response.ok) {
-          toast.error(data.message);
+          toast.error(data.message || "You have read-only access.");
         }
       } else {
         // Queue for sync later
@@ -119,7 +123,7 @@ export default function EditorPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-10">
-      <div className="mb-6 flex items-center justify-between">
+  <div className="mb-6 flex items-center justify-between">
 
   <div className="flex items-center gap-4">
 
@@ -139,22 +143,44 @@ export default function EditorPage() {
 
   </div>
 
-  <VersionHistory documentId={id} />
+  <div className="flex items-center gap-2">
+
+    {role !== "VIEWER" && (
+      <VersionHistory
+        documentId={id}
+      />
+    )}
+
+    {role === "OWNER" && (
+      <ShareDocumentDialog
+        documentId={id}
+      />
+    )}
+
+  </div>
 
 </div>
 
+      {role === "VIEWER" && (
+        <div className="mb-4 rounded bg-yellow-100 p-3 text-sm text-yellow-800 text-center font-medium">
+          This document is read only.
+        </div>
+      )}
+
       <input
-        className="w-full border-b pb-2 mb-8 text-4xl font-bold outline-none"
+        className="w-full border-b pb-2 mb-8 text-4xl font-bold outline-none disabled:bg-transparent disabled:opacity-70"
         placeholder="Untitled Document"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
+        disabled={role === "VIEWER"}
       />
 
       <textarea
-        className="min-h-[500px] w-full resize-none text-lg outline-none"
+        className="min-h-[500px] w-full resize-none text-lg outline-none disabled:bg-transparent disabled:opacity-70"
         placeholder="Start typing..."
         value={content}
         onChange={(e) => setContent(e.target.value)}
+        disabled={role === "VIEWER"}
       />
     </div>
   );
